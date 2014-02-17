@@ -1,6 +1,6 @@
 # yolo-log-parser
 
-A program for parsing yolo logs
+A program for parsing yolo logs - fork of isaacs / couchdb-log-parse
 
 ## Usage
 
