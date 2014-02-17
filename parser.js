@@ -115,9 +115,10 @@ LogParser.prototype._handleMessage = function (msg) {
   }
 }
 
-var messageExpr = /^\[([^\]]+)\] \[([^\]]+)\] \[([^\]]+)\] ([\s\S]*)$/
-var httpExpr = /^([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) - - ([A-Z]+) (.*) ([0-9]+)\n?$/
-var erlWtfExpr = /^([^{\[]+ )?([\s\S]*)/
+var messageExpr = /\[([^\]]+)\]\[([^\]]+)\] ([\s\S]*)/
+var httpExpr = /HTTP ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+) ([A-Z]+) (.+)? ([0-9][0-9][0-9]) ([0-9]+|\-)? ".+" "(.+)" ([0-9].+)/
+var ctrCallExpr = /([a-zA-Z]+?)\#([a-zA-Z]+)/
+var modelLogExpr = /([a-zA-Z]+) \<([a-zA-Z]+) \#(.+)\>/
 
 LogParser.prototype.parseMessage = function (msg) {
   msg = msg.toString()
@@ -127,21 +128,30 @@ LogParser.prototype.parseMessage = function (msg) {
   var result = {}
   result.date = new Date(parsed[1])
   result.level = parsed[2]
-  result.pid = parsed[3]
-  var more = parsed[4]
-  var http, erlWtf
+  var more = parsed[3]
+  
+  var http, erlWtf, ctrCall, modelLog;
+  
   if (http = more.match(httpExpr)) {
     result.type = 'http'
     result.ip = http[1]
     result.method = http[2]
     result.url = http[3]
     result.statusCode = +http[4]
-  } else if (erlWtf = more.match(erlWtfExpr)) {
-    result.type = 'erl'
-    result.message = erlWtf[1]
-    result.dump = erlWtf[2].trim().split(/\n/).map(function (l) {
-      return l.trim()
-    }).join('')
+    result.userAgent = http[6]
+    result.responseTime = parseInt(http[7])
+
+  } else if (ctrCall = more.match(ctrCallExpr)) {
+    result.type = 'controller'
+    result.controller = ctrCall[1]
+    result.method = ctrCall[2]
+
+  } else if(modelLog = more.match(modelLogExpr)){
+    result.type = 'model'
+    result.model = modelLog[2]
+    result.action = modelLog[1]
+    result.id = modelLog[3]
+    
   } else {
     result.type = 'misc'
     result.message = more
